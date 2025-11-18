@@ -6,7 +6,7 @@
 #include <google/protobuf/map.h>
 #include <string>
 
-void RunENet(
+void send_verifications_to_game_server(
     const char* game_server_address,
     int game_server_port,
     std::string buffer

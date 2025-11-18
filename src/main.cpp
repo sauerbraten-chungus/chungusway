@@ -3,17 +3,18 @@
 #include <fmt/core.h>
 #include <grpcpp/server_builder.h>
 #include <enet/enet.h>
+#include <thread>
 
-void print_packet_data(ENetPacket* packet) {
+void process_packet(uint8_t channel_id, ENetPacket* packet) {
     uint8_t *buffer = packet->data;
 
     uint8_t flag = *buffer++;
     std::string test = std::string(reinterpret_cast<char*>(buffer));
 
-    fmt::println("flag: {} string: {}", flag, test);
+    fmt::println("flag: {} string: {} channel: {}", flag, test, channel_id);
 }
 
-void RunServer() {
+void init_grpc_service() {
     std::string server_address = "0.0.0.0:50051";
 
     VerificationCodeService service;
@@ -27,12 +28,7 @@ void RunServer() {
     server->Wait();
 }
 
-int main() {
-    if (enet_initialize() != 0) {
-        fmt::println("An error occured when initializing ENet.");
-    }
-    // RunServer();
-
+void init_enet_host() {
     ENetAddress address;
     ENetHost *host;
     address.host = ENET_HOST_ANY;
@@ -41,7 +37,7 @@ int main() {
     host = enet_host_create(&address, 32, 2, 0, 0);
     if (host == nullptr) {
         fmt::println("An error occurred while creating the ENet server host.");
-        return 1;
+        exit(1);
     }
     fmt::println("ENet server listening on port {}", address.port);
     fmt::println("Waiting for connections...");
@@ -50,11 +46,11 @@ int main() {
     while(enet_host_service(host, &event, 1000) >= 0) {
         switch (event.type) {
             case ENET_EVENT_TYPE_CONNECT:
-                fmt::println("awesome");
+               fmt::println("awesome");
                 break;
             case ENET_EVENT_TYPE_RECEIVE:
                 fmt::println("Received packet");
-                print_packet_data(event.packet);
+                process_packet(event.channelID, event.packet);
                 enet_packet_destroy (event.packet);
                 break;
             case ENET_EVENT_TYPE_DISCONNECT:
@@ -67,6 +63,17 @@ int main() {
 
     enet_host_destroy(host);
     enet_deinitialize();
+}
 
+int main() {
+    if (enet_initialize() != 0) {
+        fmt::println("An error occured when initializing ENet.");
+        return 1;
+    }
+
+    std::thread grpc_thread(init_grpc_service);
+    init_enet_host();
+
+    grpc_thread.join();
     return 0;
 }

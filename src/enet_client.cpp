@@ -1,6 +1,7 @@
 #include "enet_client.h"
+#include <enet/enet.h>
 
-void RunENet(
+void send_verifications_to_game_server(
     const char* game_server_address,
     int game_server_port,
     std::string buffer
@@ -52,4 +53,5 @@ void RunENet(
         fmt::print("yay\n");
     }
     enet_host_flush(host);
+    enet_host_destroy(host);
 }
