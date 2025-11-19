@@ -1,4 +1,4 @@
-#include "verification_code_service.h"
+#include "chungus_service.h"
 #include <fmt/base.h>
 #include <fmt/core.h>
 #include <grpcpp/server_builder.h>
@@ -12,12 +12,19 @@ void process_packet(uint8_t channel_id, ENetPacket* packet) {
     std::string test = std::string(reinterpret_cast<char*>(buffer));
 
     fmt::println("flag: {} string: {} channel: {}", flag, test, channel_id);
+
+    // Example: Check if this is a shutdown notification
+    // You would replace this with your actual shutdown detection logic
+    if (flag == 0xFF) {  // Example flag value for shutdown
+        fmt::println("Game server shutdown detected, notifying gRPC clients");
+        push_shutdown_notification("127.0.0.1:28785", "Game server disconnected");
+    }
 }
 
 void init_grpc_service() {
     std::string server_address = "0.0.0.0:50051";
 
-    VerificationCodeService service;
+    ChungusService service;
 
     grpc::ServerBuilder builder;
     builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
