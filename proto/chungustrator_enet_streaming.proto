@@ -1,39 +1,20 @@
 syntax = "proto3";
 package chungustrator_enet;
 
-service VerificationCodeService {
-  // Original unary RPC (keep for backward compatibility)
+service ChungusService {
   rpc SendVerificationCodes(VerificationCodeRequest) returns (VerificationCodeResponse);
-
-  // New bidirectional streaming RPC
-  rpc StreamEvents(stream OrchestratorMessage) returns (stream ServerMessage);
+  rpc StreamEvents(stream ChungustratorMessage) returns (stream ChunguswayMessage);
 }
 
-// ============================================================================
-// Unary RPC messages (existing)
-// ============================================================================
-
-message VerificationCodeRequest {
-  map<string, string> codes = 1;
-}
-
-message VerificationCodeResponse {
-  string msg = 1;
-}
-
-// ============================================================================
-// Streaming RPC messages (new)
-// ============================================================================
-
-// Messages sent FROM orchestrator TO server
-message OrchestratorMessage {
+// Stub
+message ChungustratorMessage {
   oneof payload {
-    VerificationCodes verification_codes = 1;
+    VerificationCodeRequest verification_code_req = 1;
     Ping ping = 2;  // Optional: keepalive
   }
 }
 
-message VerificationCodes {
+message VerificationCodeRequest {
   map<string, string> codes = 1;
 }
 
@@ -41,18 +22,18 @@ message Ping {
   int64 timestamp = 1;
 }
 
-// Messages sent FROM server TO orchestrator
-message ServerMessage {
+
+// Service
+message ChunguswayMessage {
   oneof payload {
-    Acknowledgment ack = 1;
+    VerificationCodeResponse verification_code_res = 1;
     GameServerShutdown shutdown = 2;
     Pong pong = 3;  // Optional: keepalive response
   }
 }
 
-message Acknowledgment {
+message VerificationCodeResponse {
   string msg = 1;
-  int32 codes_received = 2;  // Number of verification codes received
 }
 
 message GameServerShutdown {
