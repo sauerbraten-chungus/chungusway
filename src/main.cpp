@@ -53,7 +53,7 @@ void init_enet_host() {
     while(enet_host_service(host, &event, 1000) >= 0) {
         switch (event.type) {
             case ENET_EVENT_TYPE_CONNECT:
-               fmt::println("awesome");
+               fmt::println("Gameserver connected");
                 break;
             case ENET_EVENT_TYPE_RECEIVE:
                 fmt::println("Received packet");

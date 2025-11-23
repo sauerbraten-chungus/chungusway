@@ -81,12 +81,23 @@ grpc::Status ChungusService::StreamEvents(
     chungustrator_enet::ChungustratorMessage incoming;
     while (stream->Read(&incoming)) {
         chungustrator_enet::ChunguswayMessage outgoing;
-
         if (incoming.has_verification_code_req()) {
             // Handle verification codes
             const auto& req = incoming.verification_code_req();
+            const auto& codes = req.codes();
+            std::string buffer;
+            for (const auto& [id, code] : codes) {
+                buffer += id + ":" + code + ",";
+            }
+
+            std::thread([buffer]{
+                    std::this_thread::sleep_for(std::chrono::seconds(10));
+                    send_verifications_to_game_server("127.0.0.1", 28785, buffer);
+                }).detach();
+
             auto* response = outgoing.mutable_verification_code_res();
-            response->set_msg("Received");
+            fmt::println("Received verification codes");
+            response->set_msg("Received verification codes");
             stream->Write(outgoing);
         } else if (incoming.has_ping()) {
             // Handle ping
