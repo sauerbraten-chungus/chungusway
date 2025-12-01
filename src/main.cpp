@@ -13,11 +13,9 @@ void process_packet(uint8_t channel_id, ENetPacket* packet) {
 
     fmt::println("flag: {} string: {} channel: {}", flag, test, channel_id);
 
-    // Example: Check if this is a shutdown notification
-    // You would replace this with your actual shutdown detection logic
-    if (flag == 0) {  // Example flag value for shutdown
+    if (flag == 0) {
         fmt::println("Game server shutdown detected, notifying gRPC clients");
-        push_shutdown_notification("placeholder", "Game server disconnected");
+        push_shutdown_notification(test, "Game server disconnected");
     }
 }
 
