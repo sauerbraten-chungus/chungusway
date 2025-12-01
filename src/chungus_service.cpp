@@ -11,10 +11,10 @@ std::mutex queue_mutex;
 std::condition_variable queue_cv;
 
 // Helper function for ENet thread to push shutdown notifications
-void push_shutdown_notification(const std::string& server_address, const std::string& reason) {
+void push_shutdown_notification(const std::string& server_container_id, const std::string& reason) {
     chungustrator_enet::ChunguswayMessage msg;
     auto* shutdown = msg.mutable_shutdown();
-    shutdown->set_server_address(server_address);
+    shutdown->set_server_container_id(server_container_id);
     shutdown->set_timestamp(std::chrono::system_clock::now().time_since_epoch().count());
     shutdown->set_reason(reason);
 

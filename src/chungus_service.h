@@ -14,7 +14,7 @@ extern std::mutex queue_mutex;
 extern std::condition_variable queue_cv;
 
 // Helper function to push shutdown messages from ENet thread
-void push_shutdown_notification(const std::string& server_address, const std::string& reason);
+void push_shutdown_notification(const std::string& server_container_id, const std::string& reason);
 
 class ChungusService final : public chungustrator_enet::ChungusService::Service {
 public:
