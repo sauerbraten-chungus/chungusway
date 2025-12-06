@@ -7,15 +7,39 @@
 
 void process_packet(uint8_t channel_id, ENetPacket* packet) {
     uint8_t *buffer = packet->data;
-
     uint8_t flag = *buffer++;
-    std::string test = std::string(reinterpret_cast<char*>(buffer));
 
-    fmt::println("flag: {} string: {} channel: {}", flag, test, channel_id);
+    switch (flag)
+    {
+        case 0: {
+            fmt::println("Game server shutdown detected, notifying gRPC clients");
+            std::string test = std::string(reinterpret_cast<char*>(buffer));
 
-    if (flag == 0) {
-        fmt::println("Game server shutdown detected, notifying gRPC clients");
-        push_shutdown_notification(test, "Game server disconnected");
+            // fmt::println("flag: {} string: {} channel: {}", flag, test, channel_id);
+            push_shutdown_notification(test, "Game server disconnected");
+            break;
+        }
+        case 1: {
+            fmt::println("detected playerinfo_all");
+            uint8_t numclients = *buffer++;
+            fmt::println("numclients: {}", numclients);
+            for (uint8_t i = 0; i < numclients; i++) {
+                fmt::println("chungID: {}", *buffer++);
+            }
+            break;
+        }
+        case 2: {
+            // Payload is hardcoded according to Chungusmod
+            fmt::println("detected playerinfo");
+            uint8_t chungid = *buffer++;
+            fmt::println("chungid: {}", chungid);
+            std::string test_string = std::string(reinterpret_cast<char*>(buffer));
+            buffer += test_string.length() + 1;
+            fmt::println("test_string: {}", test_string);
+            uint8_t test_int = *buffer++;
+            fmt::println("test_int: {}", test_int);
+            break;       
+        }   
     }
 }
 
