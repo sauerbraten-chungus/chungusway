@@ -11,6 +11,7 @@ void process_packet(uint8_t channel_id, ENetPacket* packet) {
 
     switch (flag)
     {
+        // SHUTDOWN
         case 0: {
             fmt::println("Game server shutdown detected, notifying gRPC clients");
             std::string test = std::string(reinterpret_cast<char*>(buffer));
@@ -19,6 +20,7 @@ void process_packet(uint8_t channel_id, ENetPacket* packet) {
             push_shutdown_notification(test, "Game server disconnected");
             break;
         }
+        // CHUNGUS_PLAYERINFO_ALL packet
         case 1: {
             fmt::println("detected playerinfo_all");
             uint8_t numclients = *buffer++;
@@ -28,6 +30,7 @@ void process_packet(uint8_t channel_id, ENetPacket* packet) {
             }
             break;
         }
+        // CHUGNUS_PLAYERINFO packet
         case 2: {
             // Payload is hardcoded according to Chungusmod
             fmt::println("detected playerinfo");
