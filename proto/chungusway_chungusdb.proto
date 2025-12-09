@@ -1,0 +1,20 @@
+syntax = "proto3";
+package chungusdb;
+
+service ChungusDBSerivce {
+  rpc SendMatchStats(MatchStats) returns(MatchStatsResponse);
+}
+
+message MatchStats {
+  // string = chungID
+  map<string, Stats> player_stats = 1;
+}
+
+message MatchStatsResponse {
+  string message = 1;
+}
+
+message Stats {
+  // expand later
+  int64 kills = 1;
+}
