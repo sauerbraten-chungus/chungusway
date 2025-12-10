@@ -1,27 +1,26 @@
 #include "proto/chungusway_chungusdb.grpc.pb.h"
+#include "proto/chungusway_chungusdb.pb.h"
 #include <cstdint>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
 class MatchHelper {
 public:
-  explicit MatchHelper(chungusdb::ChungusDBSerivce::Stub &stub);
+  explicit MatchHelper(std::shared_ptr<chungusdb::ChungusDBService::Stub> stub) : stub_(stub) {};
 
-  void initialize_pending_match(std::string &container_id);
-  void append_player_stats(std::string &container_id);
+  void initialize_pending_match(const std::string& container_id, const std::unordered_set<std::string>& chungids);
+  void append_player_stats(const std::string& container_id, const std::string& chungid, const chungusdb::Stats& stats);
 
 private:
-  struct PlayerStats {
-    uint64_t kills;
-  };
-
   struct PendingMatchStats {
-    std::unordered_set<std::string> expected_chungids;// hashset<ChungIDs> from all-packet
-    std::unordered_map<std::string, PlayerStats> player_stats; // hashmap<ChungIDs, stats> from individual packet
+    std::unordered_set<std::string> expected_chungids;// hashset<ChungIDs> from all-packet 
+    std::unordered_map<std::string, chungusdb::Stats> player_stats; // The end product, hashmap<ChungIDs, stats> from individual packets.
 
-    bool is_done();
+    bool is_done() const;
   };
 
   std::unordered_map<std::string, PendingMatchStats> pending_matches;
-  // insert gRPC stub
+  const std::shared_ptr<chungusdb::ChungusDBService::Stub> stub_;
+
+  void send_match_stats(const std::string& container_id, const std::unordered_map<std::string, chungusdb::Stats>& player_stats);
 };

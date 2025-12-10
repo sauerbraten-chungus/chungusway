@@ -1,7 +1,7 @@
 syntax = "proto3";
 package chungusdb;
 
-service ChungusDBSerivce {
+service ChungusDBService {
   rpc SendMatchStats(MatchStats) returns(MatchStatsResponse);
 }
 
