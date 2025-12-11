@@ -8,7 +8,16 @@ find_package(fmt CONFIG REQUIRED)
 find_package(unofficial-enet CONFIG REQUIRED)
 find_package(grpc CONFIG REQUIRED)
 
-add_executable(chungustrator-enet src/main.cpp proto/chungustrator_enet_streaming.grpc.pb.cc proto/chungustrator_enet_streaming.pb.cc src/enet_client.cpp src/chungus_service.cpp)
+add_executable(chungustrator-enet
+    src/main.cpp
+    src/enet_client.cpp
+    src/chungus_service.cpp
+    src/match_helper.cpp
+    proto/chungustrator_enet_streaming.grpc.pb.cc
+    proto/chungustrator_enet_streaming.pb.cc
+    proto/chungusway_chungusdb.grpc.pb.cc
+    proto/chungusway_chungusdb.pb.cc
+)
 
 target_include_directories(chungustrator-enet PRIVATE ${CMAKE_SOURCE_DIR})
 
