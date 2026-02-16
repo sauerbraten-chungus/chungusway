@@ -7,6 +7,7 @@
 #include <grpcpp/security/credentials.h>
 #include <enet/enet.h>
 #include <thread>
+#include <cstring>
 #include <memory>
 
 // Global MatchHelper for processing game server packets
@@ -51,9 +52,8 @@ void process_packet(uint8_t channel_id, ENetPacket* packet) {
             match_helper->initialize_pending_match(container_id, expected_chungids);
             break;
         }
-        // CHUGNUS_PLAYERINFO packet
+        // CHUNGUS_PLAYERINFO packet
         case 2: {
-            // Payload is hardcoded according to Chungusmod
             fmt::println("detected playerinfo");
 
             // Extract container ID
@@ -64,15 +64,31 @@ void process_packet(uint8_t channel_id, ENetPacket* packet) {
             // Extract player data
             uint8_t chungid = *buffer++;
             fmt::println("chungid: {}", chungid);
-            std::string test_string = std::string(reinterpret_cast<char*>(buffer));
-            buffer += test_string.length() + 1;
-            fmt::println("test_string: {}", test_string);
-            uint8_t test_int = *buffer++;
-            fmt::println("test_int: {}", test_int);
+
+            std::string name = std::string(reinterpret_cast<char*>(buffer));
+            buffer += name.length() + 1;
+            fmt::println("name: {}", name);
+
+            uint8_t health = *buffer++; // delete l8r
+            uint8_t frags = *buffer++;
+            uint8_t deaths = *buffer++;
+
+            float accuracy;
+            std::memcpy(&accuracy, buffer, sizeof(accuracy));
+            buffer += sizeof(accuracy);
+
+            uint8_t elo = *buffer++;
+
+            fmt::println("health: {} frags: {} deaths: {} accuracy: {:.2f} elo: {}", health, frags, deaths, accuracy, elo);
 
             // Create Stats object and append to MatchHelper
             chungusdb::Stats stats;
-            stats.set_kills(test_int);  // Using test_int as kills for now
+            stats.set_kills(frags);
+            // stats.set_name(name);
+            // stats.set_frags(frags);
+            // stats.set_deaths(deaths);
+            // stats.set_accuracy(accuracy);
+            // stats.set_elo(elo);
             match_helper->append_player_stats(container_id, std::to_string(chungid), stats);
             break;
         }   
