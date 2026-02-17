@@ -15,6 +15,9 @@ message MatchStatsResponse {
 }
 
 message Stats {
-  // expand later
-  int64 kills = 1;
+  string name = 1;
+  int32 frags = 2;
+  int32 deaths = 3;
+  float accuracy = 4;
+  int32 elo = 5;
 }

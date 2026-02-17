@@ -83,12 +83,12 @@ void process_packet(uint8_t channel_id, ENetPacket* packet) {
 
             // Create Stats object and append to MatchHelper
             chungusdb::Stats stats;
-            stats.set_kills(frags);
-            // stats.set_name(name);
-            // stats.set_frags(frags);
-            // stats.set_deaths(deaths);
-            // stats.set_accuracy(accuracy);
-            // stats.set_elo(elo);
+            stats.set_name(name);
+            stats.set_frags(frags);
+            stats.set_deaths(deaths);
+            stats.set_accuracy(accuracy);
+            stats.set_elo(elo);
+
             match_helper->append_player_stats(container_id, std::to_string(chungid), stats);
             break;
         }   
