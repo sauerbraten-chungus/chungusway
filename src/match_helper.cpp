@@ -58,7 +58,12 @@ void MatchHelper::send_match_stats(
     fmt::print("Match Stats for {} sent\n", container_id);
     pending_matches.erase(container_id);
   } else {
-    fmt::print("Error: Failed to send match stats for {}\n", container_id);
+    fmt::print(
+      "Error: Failed to send match stats for {}: {} (code {})\n",
+      container_id,
+      status.error_message(),
+      static_cast<int>(status.error_code())
+    );
   }
 }
 

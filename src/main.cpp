@@ -9,6 +9,7 @@
 #include <thread>
 #include <cstring>
 #include <memory>
+#include <string>
 
 // Global MatchHelper for processing game server packets
 std::unique_ptr<MatchHelper> match_helper;
@@ -43,9 +44,10 @@ void process_packet(uint8_t channel_id, ENetPacket* packet) {
 
             std::unordered_set<std::string> expected_chungids;
             for (uint8_t i = 0; i < numclients; i++) {
-                uint8_t chungid = *buffer++;
+                std::string chungid = std::string(reinterpret_cast<char*>(buffer));
+                buffer += chungid.length() + 1;
                 fmt::println("chungID: {}", chungid);
-                expected_chungids.insert(std::to_string(chungid));
+                expected_chungids.insert(chungid);
             }
 
             // Initialize pending match in MatchHelper
@@ -62,7 +64,8 @@ void process_packet(uint8_t channel_id, ENetPacket* packet) {
             fmt::println("container_id: {}", container_id);
 
             // Extract player data
-            uint8_t chungid = *buffer++;
+            std::string chungid = std::string(reinterpret_cast<char*>(buffer));
+            buffer += chungid.length() + 1;
             fmt::println("chungid: {}", chungid);
 
             std::string name = std::string(reinterpret_cast<char*>(buffer));
@@ -89,7 +92,7 @@ void process_packet(uint8_t channel_id, ENetPacket* packet) {
             stats.set_accuracy(accuracy);
             stats.set_elo(elo);
 
-            match_helper->append_player_stats(container_id, std::to_string(chungid), stats);
+            match_helper->append_player_stats(container_id, chungid, stats);
             break;
         }   
     }
