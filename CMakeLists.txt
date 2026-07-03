@@ -2,11 +2,16 @@ cmake_minimum_required(VERSION 3.10)
 
 project(chungustrator-enet)
 set(CMAKE_CXX_STANDARD 20)
-set(CMAKAE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(fmt CONFIG REQUIRED)
-find_package(unofficial-enet CONFIG REQUIRED)
-find_package(grpc CONFIG REQUIRED)
+find_package(gRPC CONFIG REQUIRED)
+
+# nixpkgs' enet ships only a pkg-config file (libenet.pc), no CMake config package --
+# unlike vcpkg's "unofficial-enet" wrapper. pkg-config works under both nix and vcpkg
+# (vcpkg's toolchain file also populates PKG_CONFIG_PATH for most ports).
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(ENET REQUIRED IMPORTED_TARGET libenet)
 
 add_executable(chungustrator-enet
     src/main.cpp
@@ -21,4 +26,4 @@ add_executable(chungustrator-enet
 
 target_include_directories(chungustrator-enet PRIVATE ${CMAKE_SOURCE_DIR})
 
-target_link_libraries(chungustrator-enet PRIVATE unofficial::enet::enet fmt::fmt gRPC::grpc++)
+target_link_libraries(chungustrator-enet PRIVATE PkgConfig::ENET fmt::fmt gRPC::grpc++)

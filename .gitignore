@@ -2,5 +2,6 @@
 *.pb.cc
 .cache/
 build/
+build-nix/
 vcpkg_installed/
 CMakeUserPresets.json
