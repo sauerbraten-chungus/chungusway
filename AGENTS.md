@@ -1,4 +1,4 @@
-# CLAUDE.md — chungusway
+# AGENTS.md — chungusway
 
 ## Overview
 
@@ -6,7 +6,7 @@ C++ bridge between game servers (ENet) and the backend platform (gRPC). Forwards
 
 - **Language**: C++20 (gRPC + ENet)
 - **Ports**: 50051 (gRPC server), 30000 (ENet listener)
-- **Build**: CMake + vcpkg
+- **Build**: CMake — `nix` preset (nixpkgs deps, default for local dev) or `vcpkg` preset
 - **Binary name**: `chungustrator-enet` (legacy naming)
 - **Status**: Active
 
@@ -14,9 +14,11 @@ C++ bridge between game servers (ENet) and the backend platform (gRPC). Forwards
 
 ### gRPC Service (port 50051) — `ChungusService`
 
+chungusway **hosts** this service; chungustrator dials in (at `CHUNGUSWAY_URL`, default `http://127.0.0.1:50051`) and opens the stream.
+
 | RPC | Type | Purpose |
 |-----|------|---------|
-| `SendVerificationCodes` | Unary | Receive codes, forward to game server via ENet |
+| `SendVerificationCodes` | Unary | **Dead** — chungustrator never calls it; codes arrive via `StreamEvents` |
 | `StreamEvents` | Bidirectional | Streaming with chungustrator (codes, pings, shutdowns) |
 
 ### ENet Listener (port 30000) — Packet Types
@@ -47,16 +49,17 @@ C++ bridge between game servers (ENet) and the backend platform (gRPC). Forwards
 
 ## Build
 
-```bash
-cmake --preset vcpkg    # requires VCPKG_ROOT env var
-cmake --build build
-./build/chungustrator-enet
-```
+Generated proto stubs (`.pb.h`/`.pb.cc`/`.grpc.pb.*`) are **gitignored** — regenerate them before the first cmake build (`just protos` from `chungusroot/`, or the protoc commands below).
 
-**Regenerate proto stubs:**
 ```bash
-protoc --grpc_out=proto --plugin=protoc-gen-grpc=`which grpc_cpp_plugin` proto/<file>.proto
-protoc --cpp_out=proto proto/<file>.proto
+# from the nix devshell: nix develop ./chungusroot#chungusway (or the default fullShell)
+cd proto
+protoc --grpc_out=. --plugin=protoc-gen-grpc=$(which grpc_cpp_plugin) chungustrator_enet_streaming.proto chungusway_chungusdb.proto
+protoc --cpp_out=. chungustrator_enet_streaming.proto chungusway_chungusdb.proto
+cd ..
+cmake --preset nix      # or: cmake --preset vcpkg (requires VCPKG_ROOT)
+cmake --build build-nix
+./build-nix/chungustrator-enet
 ```
 
 ## Architecture Notes
