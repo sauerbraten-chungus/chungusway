@@ -18,12 +18,6 @@ void push_shutdown_notification(const std::string& server_container_id, const st
 
 class ChungusService final : public chungustrator_enet::ChungusService::Service {
 public:
-    grpc::Status SendVerificationCodes(
-        grpc::ServerContext* context,
-        const chungustrator_enet::VerificationCodeRequest* request,
-        chungustrator_enet::VerificationCodeResponse* response
-    ) override;
-
     grpc::Status StreamEvents(
         grpc::ServerContext* context,
         grpc::ServerReaderWriter<chungustrator_enet::ChunguswayMessage,

@@ -25,26 +25,6 @@ void push_shutdown_notification(const std::string& server_container_id, const st
     queue_cv.notify_one();
 }
 
-grpc::Status ChungusService::SendVerificationCodes(
-    grpc::ServerContext* context,
-    const chungustrator_enet::VerificationCodeRequest* request,
-    chungustrator_enet::VerificationCodeResponse* response
-) {
-    const auto& codes = request->codes();
-    std::string buffer;
-    for (const auto& [id, code] : codes) {
-        buffer += id + ":" + code + ",";
-    }
-
-    std::thread([buffer]{
-            std::this_thread::sleep_for(std::chrono::seconds(10));
-            send_verifications_to_game_server("127.0.0.1", 28785, buffer);
-        }).detach();
-
-    response->set_msg("Received");
-    return grpc::Status::OK;
-}
-
 grpc::Status ChungusService::StreamEvents(
     grpc::ServerContext* context,
     grpc::ServerReaderWriter<chungustrator_enet::ChunguswayMessage,
@@ -90,14 +70,21 @@ grpc::Status ChungusService::StreamEvents(
                 buffer += id + ":" + code + ",";
             }
 
-            std::thread([buffer]{
-                    std::this_thread::sleep_for(std::chrono::seconds(10));
-                    send_verifications_to_game_server("127.0.0.1", 28785, buffer);
-                }).detach();
+            const std::string host = req.game_server_host().empty()
+                ? "127.0.0.1" : req.game_server_host();
+            const int port = static_cast<int>(req.game_server_port());
 
             auto* response = outgoing.mutable_verification_code_res();
-            fmt::println("Received verification codes");
-            response->set_msg("Received verification codes");
+            if (port == 0) {
+                fmt::println("Verification code request without game_server_port; dropping");
+                response->set_msg("Missing game_server_port");
+            } else {
+                std::thread([buffer, host, port]{
+                    send_verifications_to_game_server(host.c_str(), port, buffer);
+                }).detach();
+                fmt::println("Received verification codes for game server {}:{}", host, port);
+                response->set_msg("Received verification codes");
+            }
             stream->Write(outgoing);
         } else if (incoming.has_ping()) {
             // Handle ping

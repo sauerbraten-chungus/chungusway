@@ -2,7 +2,6 @@ syntax = "proto3";
 package chungustrator_enet;
 
 service ChungusService {
-  rpc SendVerificationCodes(VerificationCodeRequest) returns (VerificationCodeResponse);
   rpc StreamEvents(stream ChungustratorMessage) returns (stream ChunguswayMessage);
 }
 
@@ -16,6 +15,10 @@ message ChungustratorMessage {
 
 message VerificationCodeRequest {
   map<string, string> codes = 1;
+  // Where chungusway should deliver the codes: the game server's ENet endpoint,
+  // known only to chungustrator (host port allocated per match).
+  string game_server_host = 2;
+  uint32 game_server_port = 3;
 }
 
 message Ping {
@@ -37,7 +40,7 @@ message VerificationCodeResponse {
 }
 
 message GameServerShutdown {
-  string server_container_id = 1;  // Docker container-id
+  string server_container_id= 1;  // Docker container-id
   int64 timestamp = 2;            // Unix timestamp of shutdown
   string reason = 3;              // Optional: why it shut down
 }
