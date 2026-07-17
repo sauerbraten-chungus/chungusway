@@ -158,10 +158,10 @@ int main() {
     // Initialize ChungusDB gRPC client stub
     std::string chungusdb_address = "localhost:50052";  // TODO: Make configurable
     auto channel = grpc::CreateChannel(chungusdb_address, grpc::InsecureChannelCredentials());
-    auto stub = chungusdb::ChungusDBService::NewStub(channel);
+    auto stub = chungusdb::ChungusDB::NewStub(channel);
 
     // Initialize global MatchHelper (convert unique_ptr to shared_ptr)
-    std::shared_ptr<chungusdb::ChungusDBService::Stub> shared_stub = std::move(stub);
+    std::shared_ptr<chungusdb::ChungusDB::Stub> shared_stub = std::move(stub);
     match_helper = std::make_unique<MatchHelper>(shared_stub);
     fmt::println("Initialized MatchHelper with ChungusDB at {}", chungusdb_address);
 

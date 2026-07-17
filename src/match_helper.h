@@ -6,7 +6,7 @@
 #include <unordered_set>
 class MatchHelper {
 public:
-  explicit MatchHelper(std::shared_ptr<chungusdb::ChungusDBService::Stub> stub) : stub_(stub) {};
+  explicit MatchHelper(std::shared_ptr<chungusdb::ChungusDB::Stub> stub) : stub_(stub) {};
 
   void initialize_pending_match(const std::string& container_id, const std::unordered_set<std::string>& chungids);
   void append_player_stats(const std::string& container_id, const std::string& chungid, const chungusdb::Stats& stats);
@@ -20,7 +20,7 @@ private:
   };
 
   std::unordered_map<std::string, PendingMatchStats> pending_matches;
-  const std::shared_ptr<chungusdb::ChungusDBService::Stub> stub_;
+  const std::shared_ptr<chungusdb::ChungusDB::Stub> stub_;
 
   void send_match_stats(const std::string& container_id, const std::unordered_map<std::string, chungusdb::Stats>& player_stats);
 };

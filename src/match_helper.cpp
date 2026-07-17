@@ -43,16 +43,16 @@ void MatchHelper::send_match_stats(
   const std::string& container_id,
   const std::unordered_map<std::string, chungusdb::Stats>& all_player_stats
 ) {
-  chungusdb::MatchStats match_stats;
+  chungusdb::RecordMatchStatsRequest match_stats;
   auto* pb_stats = match_stats.mutable_player_stats();
   for (const auto& [chungid, stats] : all_player_stats) {
     (*pb_stats)[chungid] = stats;
   }
 
   grpc::ClientContext context;
-  chungusdb::MatchStatsResponse response;
+  chungusdb::RecordMatchStatsResponse response;
   
-  const auto& status = stub_->SendMatchStats(&context, match_stats, &response);
+  const auto& status = stub_->RecordMatchStats(&context, match_stats, &response);
 
   if (status.ok()) {
     fmt::print("Match Stats for {} sent\n", container_id);

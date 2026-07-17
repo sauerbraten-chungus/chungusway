@@ -1,16 +1,16 @@
 syntax = "proto3";
 package chungusdb;
 
-service ChungusDBService {
-  rpc SendMatchStats(MatchStats) returns(MatchStatsResponse);
+service ChungusDB {
+  rpc RecordMatchStats(RecordMatchStatsRequest) returns(RecordMatchStatsResponse);
 }
 
-message MatchStats {
+message RecordMatchStatsRequest {
   // string = chungID
   map<string, Stats> player_stats = 1;
 }
 
-message MatchStatsResponse {
+message RecordMatchStatsResponse {
   string message = 1;
 }
 

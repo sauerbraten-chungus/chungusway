@@ -33,7 +33,7 @@ chungusway **hosts** this service; chungustrator dials in (at `CHUNGUSWAY_URL`, 
 
 | RPC | Purpose |
 |-----|---------|
-| `SendMatchStats` | Forward aggregated match stats |
+| `RecordMatchStats` | Forward aggregated match stats |
 
 ## Key Files
 
@@ -64,7 +64,7 @@ cmake --build build-nix
 
 ## Architecture Notes
 
-- **Match stats flow**: Receives `PLAYERINFO_ALL` (registers expected players) → receives individual `PLAYERINFO` packets → when all players reported, spawns detached thread to `SendMatchStats` to chungusdb
+- **Match stats flow**: Receives `PLAYERINFO_ALL` (registers expected players) → receives individual `PLAYERINFO` packets → when all players reported, spawns detached thread to `RecordMatchStats` to chungusdb
 - **Verification code flow**: Chungustrator sends codes via streaming → chungusway forwards via ENet to game server at `127.0.0.1:28785`
 - **Shutdown flow**: Game server sends ENet shutdown packet → chungusway pushes `GameServerShutdown` message on outgoing gRPC stream → chungustrator receives and cleans up containers
 - **Threading**: ENet thread + gRPC thread, shared state via mutex + condition variable
