@@ -63,7 +63,7 @@ cmake --build build-nix
 
 ## Architecture Notes
 
-- **Match stats flow**: Receives `PLAYERINFO_ALL` (registers expected players) → receives individual `PLAYERINFO` packets → when all players reported, spawns detached thread to `RecordMatchStats` to chungusdb
+- **Match stats flow**: Receives `PLAYERINFO_ALL` (registers expected players) → receives individual `PLAYERINFO` packets (membership-checked: stats for chungids not in the expected set are dropped) → when all expected players reported, stats are handed to a detached thread for `RecordMatchStats` to chungusdb (entry erased before sending; `pending_matches` is mutex-guarded). Pending matches older than 60 s are swept from the ENet loop tick: partial stats are sent, empty ones dropped — a lost packet can't park a match forever
 - **Verification code flow**: Chungustrator streams codes together with the target game server's `game_server_host:game_server_port` (allocated per match) → chungusway retries the ENet connect (12 × 5 s window, ~60 s budget, covers container boot) and forwards the codes; on exhaustion it logs and drops without affecting the process
 - **Shutdown flow**: Game server sends ENet shutdown packet → chungusway pushes `GameServerShutdown` message on outgoing gRPC stream → chungustrator receives and cleans up containers
 - **Threading**: ENet thread + gRPC thread, shared state via mutex + condition variable

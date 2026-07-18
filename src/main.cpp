@@ -143,6 +143,7 @@ void init_enet_host() {
             case ENET_EVENT_TYPE_NONE:
                 break;
         }
+        match_helper->sweep_stale();
     }
 
     enet_host_destroy(host);
