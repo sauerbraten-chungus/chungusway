@@ -11,18 +11,18 @@ class MatchHelper {
 public:
   explicit MatchHelper(std::shared_ptr<chungusdb::ChungusDB::Stub> stub) : stub_(stub) {};
 
-  void initialize_pending_match(const std::string& container_id, const std::unordered_set<std::string>& chungids);
+  void initialize_pending_report(const std::string& container_id, const std::unordered_set<std::string>& chungids);
   void append_player_stats(const std::string& container_id, const std::string& chungid, const chungusdb::Stats& stats);
 
-  // Flush pending matches older than STALE_AFTER: send whatever stats arrived
+  // Flush pending reports older than STALE_AFTER: send whatever stats arrived
   // (some data beats none) and drop the entry either way. Called from the
-  // ENet loop tick so a lost packet can't park a match forever.
+  // ENet loop tick so a lost packet can't park a report forever.
   void sweep_stale();
 
 private:
   static constexpr std::chrono::seconds STALE_AFTER{60};
 
-  struct PendingMatchStats {
+  struct PendingStatsReport {
     std::unordered_set<std::string> expected_chungids;              // from all-packet
     std::unordered_map<std::string, chungusdb::Stats> player_stats; // from individual packets
     std::chrono::steady_clock::time_point created_at;
@@ -30,8 +30,8 @@ private:
     bool is_done() const;
   };
 
-  std::mutex mutex_;  // guards pending_matches (ENet thread + detached senders)
-  std::unordered_map<std::string, PendingMatchStats> pending_matches;
+  std::mutex mutex_;  // guards pending_reports (ENet thread + detached senders)
+  std::unordered_map<std::string, PendingStatsReport> pending_reports;
   const std::shared_ptr<chungusdb::ChungusDB::Stub> stub_;
 
   // Takes ownership of the stats (entry already erased); safe to run detached.

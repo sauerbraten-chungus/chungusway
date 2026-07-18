@@ -50,8 +50,8 @@ void process_packet(uint8_t channel_id, ENetPacket* packet) {
                 expected_chungids.insert(chungid);
             }
 
-            // Initialize pending match in MatchHelper
-            match_helper->initialize_pending_match(container_id, expected_chungids);
+            // Start assembling this match's stats report in MatchHelper
+            match_helper->initialize_pending_report(container_id, expected_chungids);
             break;
         }
         // CHUNGUS_PLAYERINFO packet

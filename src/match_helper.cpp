@@ -8,12 +8,12 @@
 #include <vector>
 #include <utility>
 
-void MatchHelper::initialize_pending_match(
+void MatchHelper::initialize_pending_report(
   const std::string& container_id,
   const std::unordered_set<std::string>& expected_chungids
 ) {
   std::lock_guard<std::mutex> lock(mutex_);
-  pending_matches[container_id] = PendingMatchStats{
+  pending_reports[container_id] = PendingStatsReport{
     expected_chungids,
     {},
     std::chrono::steady_clock::now()
@@ -30,8 +30,8 @@ void MatchHelper::append_player_stats(
   {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    auto it = pending_matches.find(container_id);
-    if (it == pending_matches.end()) {
+    auto it = pending_reports.find(container_id);
+    if (it == pending_reports.end()) {
       fmt::print("Error: Bad container_id in append_player_stats, {}\n", container_id);
       return;
     }
@@ -51,7 +51,7 @@ void MatchHelper::append_player_stats(
     // Complete: take ownership and erase before sending, so the detached
     // sender never touches the map and late packets are cleanly rejected.
     ready_stats = std::move(it->second.player_stats);
-    pending_matches.erase(it);
+    pending_reports.erase(it);
   }
 
   std::thread([this, container_id, stats = std::move(ready_stats)]{
@@ -65,14 +65,14 @@ void MatchHelper::sweep_stale() {
   {
     std::lock_guard<std::mutex> lock(mutex_);
     const auto now = std::chrono::steady_clock::now();
-    for (auto it = pending_matches.begin(); it != pending_matches.end();) {
+    for (auto it = pending_reports.begin(); it != pending_reports.end();) {
       if (now - it->second.created_at >= STALE_AFTER) {
         fmt::print(
           "Match {} timed out with {}/{} player stats; flushing\n",
           it->first, it->second.player_stats.size(), it->second.expected_chungids.size()
         );
         stale.emplace_back(it->first, std::move(it->second.player_stats));
-        it = pending_matches.erase(it);
+        it = pending_reports.erase(it);
       } else {
         ++it;
       }
@@ -117,7 +117,7 @@ void MatchHelper::send_match_stats(
   }
 }
 
-bool MatchHelper::PendingMatchStats::is_done() const {
+bool MatchHelper::PendingStatsReport::is_done() const {
   // Appends are membership-checked, so player_stats keys are a subset of
   // expected_chungids; equal sizes therefore means exact set equality.
   return expected_chungids.size() == player_stats.size();
