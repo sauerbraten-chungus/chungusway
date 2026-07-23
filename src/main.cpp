@@ -7,6 +7,7 @@
 #include <grpcpp/security/credentials.h>
 #include <enet/enet.h>
 #include <thread>
+#include <cstdlib>
 #include <cstring>
 #include <memory>
 #include <string>
@@ -156,8 +157,9 @@ int main() {
         return 1;
     }
 
-    // Initialize ChungusDB gRPC client stub
-    std::string chungusdb_address = "localhost:50052";  // TODO: Make configurable
+    // ChungusDB gRPC client stub; address from CHUNGUSDB_URL, local default
+    const char* chungusdb_env = std::getenv("CHUNGUSDB_URL");
+    std::string chungusdb_address = chungusdb_env ? chungusdb_env : "localhost:50052";
     auto channel = grpc::CreateChannel(chungusdb_address, grpc::InsecureChannelCredentials());
     auto stub = chungusdb::ChungusDB::NewStub(channel);
 

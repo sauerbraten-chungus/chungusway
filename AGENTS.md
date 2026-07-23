@@ -67,6 +67,6 @@ cmake --build build-nix
 - **Verification code flow**: Chungustrator streams codes together with the target game server's `game_server_host:game_server_port` (allocated per match) → chungusway retries the ENet connect (12 × 5 s window, ~60 s budget, covers container boot) and forwards the codes; on exhaustion it logs and drops without affecting the process
 - **Shutdown flow**: Game server sends ENet shutdown packet → chungusway pushes `GameServerShutdown` message on outgoing gRPC stream → chungustrator receives and cleans up containers
 - **Threading**: ENet thread + gRPC thread, shared state via mutex + condition variable
-- Hardcoded address: ChungusDB at `localhost:50052` — needs env var config (game server address now arrives per-request from chungustrator)
+- `CHUNGUSDB_URL` configures the ChungusDB gRPC address (default `localhost:50052`); its port must match chungusdb's gRPC listener
 - Proto files are pre-compiled; regenerate manually if `.proto` changes
 - No tests
