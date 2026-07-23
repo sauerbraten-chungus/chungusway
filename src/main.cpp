@@ -1,7 +1,6 @@
 #include "chungus_service.h"
 #include "match_helper.h"
-#include <fmt/base.h>
-#include <fmt/core.h>
+#include "logging.h"
 #include <grpcpp/server_builder.h>
 #include <grpcpp/create_channel.h>
 #include <grpcpp/security/credentials.h>
@@ -16,76 +15,64 @@
 std::unique_ptr<MatchHelper> match_helper;
 
 void process_packet(uint8_t channel_id, ENetPacket* packet) {
-    uint8_t *buffer = packet->data;
-    uint8_t flag = *buffer++;
+    uint8_t* buffer = packet->data;
+    const uint8_t flag = *buffer++;
 
-    switch (flag)
-    {
-        // SHUTDOWN
+    switch (flag) {
         case 0: {
-            fmt::println("Game server shutdown detected, notifying gRPC clients");
-            std::string test = std::string(reinterpret_cast<char*>(buffer));
-
-            // fmt::println("flag: {} string: {} channel: {}", flag, test, channel_id);
-            push_shutdown_notification(test, "Game server disconnected");
+            const std::string container_id(reinterpret_cast<char*>(buffer));
+            chunguslog::info(
+                "event=game_server_shutdown container_id={} channel={}",
+                container_id, channel_id);
+            push_shutdown_notification(container_id, "Game server disconnected");
             break;
         }
-        // CHUNGUS_PLAYERINFO_ALL packet
         case 1: {
-            fmt::println("detected playerinfo_all");
-
-            // Extract container ID
-            std::string container_id = std::string(reinterpret_cast<char*>(buffer));
+            const std::string container_id(reinterpret_cast<char*>(buffer));
             buffer += container_id.length() + 1;
-            fmt::println("container_id: {}", container_id);
 
-            // Extract player count and chungids
-            uint8_t numclients = *buffer++;
-            fmt::println("numclients: {}", numclients);
-
+            const uint8_t numclients = *buffer++;
             std::unordered_set<std::string> expected_chungids;
             for (uint8_t i = 0; i < numclients; i++) {
-                std::string chungid = std::string(reinterpret_cast<char*>(buffer));
+                std::string chungid(reinterpret_cast<char*>(buffer));
                 buffer += chungid.length() + 1;
-                fmt::println("chungID: {}", chungid);
-                expected_chungids.insert(chungid);
+                chunguslog::debug(
+                    "event=stats_report_player_expected container_id={} chungid={}",
+                    container_id, chungid);
+                expected_chungids.insert(std::move(chungid));
             }
 
-            // Start assembling this match's stats report in MatchHelper
+            chunguslog::info(
+                "event=stats_report_started container_id={} expected_players={}",
+                container_id, expected_chungids.size());
             match_helper->initialize_pending_report(container_id, expected_chungids);
             break;
         }
-        // CHUNGUS_PLAYERINFO packet
         case 2: {
-            fmt::println("detected playerinfo");
-
-            // Extract container ID
-            std::string container_id = std::string(reinterpret_cast<char*>(buffer));
+            const std::string container_id(reinterpret_cast<char*>(buffer));
             buffer += container_id.length() + 1;
-            fmt::println("container_id: {}", container_id);
 
-            // Extract player data
-            std::string chungid = std::string(reinterpret_cast<char*>(buffer));
+            const std::string chungid(reinterpret_cast<char*>(buffer));
             buffer += chungid.length() + 1;
-            fmt::println("chungid: {}", chungid);
 
-            std::string name = std::string(reinterpret_cast<char*>(buffer));
+            const std::string name(reinterpret_cast<char*>(buffer));
             buffer += name.length() + 1;
-            fmt::println("name: {}", name);
 
-            uint8_t health = *buffer++; // delete l8r
-            uint8_t frags = *buffer++;
-            uint8_t deaths = *buffer++;
+            buffer++; // health is transmitted but not persisted
+            const uint8_t frags = *buffer++;
+            const uint8_t deaths = *buffer++;
 
             float accuracy;
             std::memcpy(&accuracy, buffer, sizeof(accuracy));
             buffer += sizeof(accuracy);
 
-            uint8_t elo = *buffer++;
+            const uint8_t elo = *buffer++;
 
-            fmt::println("health: {} frags: {} deaths: {} accuracy: {:.2f} elo: {}", health, frags, deaths, accuracy, elo);
+            chunguslog::info(
+                "event=player_stats_received container_id={} chungid={} frags={} deaths={} accuracy={:.2f} elo={}",
+                container_id, chungid, static_cast<int>(frags), static_cast<int>(deaths),
+                accuracy, static_cast<int>(elo));
 
-            // Create Stats object and append to MatchHelper
             chungusdb::Stats stats;
             stats.set_name(name);
             stats.set_frags(frags);
@@ -95,51 +82,63 @@ void process_packet(uint8_t channel_id, ENetPacket* packet) {
 
             match_helper->append_player_stats(container_id, chungid, stats);
             break;
-        }   
+        }
+        default:
+            chunguslog::warn(
+                "event=packet_dropped reason=unknown_flag flag={} channel={}",
+                static_cast<int>(flag), channel_id);
+            break;
     }
 }
 
 void init_grpc_service() {
-    std::string server_address = "0.0.0.0:50051";
+    const std::string server_address = "0.0.0.0:50051";
 
     ChungusService service;
-
     grpc::ServerBuilder builder;
     builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
     builder.RegisterService(&service);
     std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
-    fmt::println("Server listening on {}", server_address);
+    if (!server) {
+        chunguslog::error(
+            "event=grpc_server_start_failed listen_address={}",
+            server_address);
+        return;
+    }
 
+    chunguslog::info("event=grpc_server_started listen_address={}", server_address);
     server->Wait();
 }
 
 void init_enet_host() {
     ENetAddress address;
-    ENetHost *host;
     address.host = ENET_HOST_ANY;
     address.port = 30000;
 
-    host = enet_host_create(&address, 32, 2, 0, 0);
+    ENetHost* host = enet_host_create(&address, 32, 2, 0, 0);
     if (host == nullptr) {
-        fmt::println("An error occurred while creating the ENet server host.");
+        chunguslog::error(
+            "event=enet_server_start_failed listen_port={}",
+            address.port);
         exit(1);
     }
-    fmt::println("ENet server listening on port {}", address.port);
-    fmt::println("Waiting for connections...");
+    chunguslog::info("event=enet_server_started listen_port={}", address.port);
 
     ENetEvent event;
-    while(enet_host_service(host, &event, 1000) >= 0) {
+    while (enet_host_service(host, &event, 1000) >= 0) {
         switch (event.type) {
             case ENET_EVENT_TYPE_CONNECT:
-               fmt::println("Gameserver connected");
+                chunguslog::info("event=game_server_connected");
                 break;
             case ENET_EVENT_TYPE_RECEIVE:
-                fmt::println("Received packet");
+                chunguslog::debug(
+                    "event=packet_received channel={} bytes={}",
+                    event.channelID, event.packet->dataLength);
                 process_packet(event.channelID, event.packet);
-                enet_packet_destroy (event.packet);
+                enet_packet_destroy(event.packet);
                 break;
             case ENET_EVENT_TYPE_DISCONNECT:
-                fmt::println("Client disconnected.");
+                chunguslog::info("event=game_server_disconnected");
                 break;
             case ENET_EVENT_TYPE_NONE:
                 break;
@@ -153,20 +152,22 @@ void init_enet_host() {
 
 int main() {
     if (enet_initialize() != 0) {
-        fmt::println("An error occured when initializing ENet.");
+        chunguslog::error("event=enet_initialization_failed");
         return 1;
     }
 
-    // ChungusDB gRPC client stub; address from CHUNGUSDB_URL, local default
     const char* chungusdb_env = std::getenv("CHUNGUSDB_URL");
-    std::string chungusdb_address = chungusdb_env ? chungusdb_env : "localhost:50052";
-    auto channel = grpc::CreateChannel(chungusdb_address, grpc::InsecureChannelCredentials());
+    const std::string chungusdb_address =
+        chungusdb_env ? chungusdb_env : "localhost:50052";
+    auto channel =
+        grpc::CreateChannel(chungusdb_address, grpc::InsecureChannelCredentials());
     auto stub = chungusdb::ChungusDB::NewStub(channel);
 
-    // Initialize global MatchHelper (convert unique_ptr to shared_ptr)
     std::shared_ptr<chungusdb::ChungusDB::Stub> shared_stub = std::move(stub);
     match_helper = std::make_unique<MatchHelper>(shared_stub);
-    fmt::println("Initialized MatchHelper with ChungusDB at {}", chungusdb_address);
+    chunguslog::info(
+        "event=chungusdb_client_initialized address={}",
+        chungusdb_address);
 
     std::thread grpc_thread(init_grpc_service);
     init_enet_host();

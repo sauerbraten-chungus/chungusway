@@ -1,6 +1,6 @@
 #include "match_helper.h"
+#include "logging.h"
 #include "proto/chungusway_chungusdb.pb.h"
-#include <fmt/base.h>
 #include <grpcpp/client_context.h>
 #include <string>
 #include <thread>
@@ -32,14 +32,18 @@ void MatchHelper::append_player_stats(
 
     auto it = pending_reports.find(container_id);
     if (it == pending_reports.end()) {
-      fmt::print("Error: Bad container_id in append_player_stats, {}\n", container_id);
+      chunguslog::warn(
+        "event=player_stats_dropped reason=unknown_report container_id={} chungid={}",
+        container_id, chungid);
       return;
     }
 
     // Only accept players announced in the all-packet: rejects empty/unknown
     // chungids so garbage can't complete (or stall) the batch.
     if (it->second.expected_chungids.find(chungid) == it->second.expected_chungids.end()) {
-      fmt::print("Dropping stats for unexpected chungid '{}' in match {}\n", chungid, container_id);
+      chunguslog::warn(
+        "event=player_stats_dropped reason=unexpected_chungid container_id={} chungid={}",
+        container_id, chungid);
       return;
     }
 
@@ -67,8 +71,8 @@ void MatchHelper::sweep_stale() {
     const auto now = std::chrono::steady_clock::now();
     for (auto it = pending_reports.begin(); it != pending_reports.end();) {
       if (now - it->second.created_at >= STALE_AFTER) {
-        fmt::print(
-          "Match {} timed out with {}/{} player stats; flushing\n",
+        chunguslog::warn(
+          "event=stats_report_timed_out container_id={} received_players={} expected_players={}",
           it->first, it->second.player_stats.size(), it->second.expected_chungids.size()
         );
         stale.emplace_back(it->first, std::move(it->second.player_stats));
@@ -81,7 +85,9 @@ void MatchHelper::sweep_stale() {
 
   for (auto& [container_id, stats] : stale) {
     if (stats.empty()) {
-      fmt::print("Match {} timed out with no stats; dropping\n", container_id);
+      chunguslog::warn(
+        "event=stats_report_dropped reason=no_player_stats container_id={}",
+        container_id);
       continue;
     }
     std::thread([this, container_id, s = std::move(stats)]() mutable {
@@ -106,13 +112,16 @@ void MatchHelper::send_match_stats(
   const auto& status = stub_->RecordMatchStats(&context, match_stats, &response);
 
   if (status.ok()) {
-    fmt::print("Match Stats for {} sent\n", container_id);
+    chunguslog::info(
+      "event=match_stats_forwarded container_id={} players={}",
+      container_id, pb_stats->size());
   } else {
-    fmt::print(
-      "Error: Failed to send match stats for {}: {} (code {})\n",
+    chunguslog::error(
+      "event=match_stats_forward_failed container_id={} players={} grpc_code={} error={:?}",
       container_id,
-      status.error_message(),
-      static_cast<int>(status.error_code())
+      pb_stats->size(),
+      static_cast<int>(status.error_code()),
+      status.error_message()
     );
   }
 }

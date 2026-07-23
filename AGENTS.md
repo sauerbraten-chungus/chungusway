@@ -42,6 +42,7 @@ chungusway **hosts** this service; chungustrator dials in (at `CHUNGUSWAY_URL`, 
 | `src/chungus_service.cpp/h` | gRPC service (streaming + unary) |
 | `src/match_helper.cpp/h` | Match stats aggregation and forwarding |
 | `src/enet_client.cpp/h` | ENet client for sending verification codes |
+| `src/logging.h` | Structured UTC logger with `LOG_LEVEL` filtering |
 | `proto/chungustrator_enet_streaming.proto` | Primary gRPC service definition |
 | `proto/chungusway_chungusdb.proto` | ChungusDB stats service definition |
 | `proto/chungustrator_enet.proto` | Legacy proto (unused) |
@@ -68,5 +69,6 @@ cmake --build build-nix
 - **Shutdown flow**: Game server sends ENet shutdown packet → chungusway pushes `GameServerShutdown` message on outgoing gRPC stream → chungustrator receives and cleans up containers
 - **Threading**: ENet thread + gRPC thread, shared state via mutex + condition variable
 - `CHUNGUSDB_URL` configures the ChungusDB gRPC address (default `localhost:50052`); its port must match chungusdb's gRPC listener
+- **Logging**: stderr lines use `[UTC timestamp][chungusway][level] event=<name> key=value...`. `LOG_LEVEL` defaults to `INFO`; `DEBUG` enables packet, expected-player, and retry detail. Match/stat events carry `container_id` and `chungid`; verification-code values are never logged.
 - Proto files are pre-compiled; regenerate manually if `.proto` changes
 - No tests

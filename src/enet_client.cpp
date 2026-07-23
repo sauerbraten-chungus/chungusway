@@ -1,4 +1,5 @@
 #include "enet_client.h"
+#include "logging.h"
 #include <enet/enet.h>
 
 // Per-attempt ENet connect window; total budget is
@@ -14,8 +15,9 @@ void send_verifications_to_game_server(
     for (int attempt = 1; attempt <= CONNECT_ATTEMPTS; attempt++) {
         ENetHost* host = enet_host_create(NULL, 1, 2, 0, 0);
         if (host == nullptr) {
-            fmt::print("ENet host creation failed; cannot send codes to {}:{}\n",
-                       game_server_address, game_server_port);
+            chunguslog::error(
+                "event=verification_code_delivery_failed reason=enet_host_creation game_server_host={} game_server_port={}",
+                game_server_address, game_server_port);
             return;
         }
 
@@ -32,12 +34,14 @@ void send_verifications_to_game_server(
         {
             ENetPacket* packet = enet_packet_create(buffer.data(), buffer.size(), ENET_PACKET_FLAG_RELIABLE);
             if (enet_peer_send(peer, 2, packet) != 0) {
-                fmt::print("Failed to queue verification codes packet for {}:{}\n",
-                           game_server_address, game_server_port);
+                chunguslog::error(
+                    "event=verification_code_delivery_failed reason=packet_queue game_server_host={} game_server_port={} attempt={}",
+                    game_server_address, game_server_port, attempt);
                 enet_packet_destroy(packet);
             } else {
-                fmt::print("Verification codes sent to {}:{} (attempt {})\n",
-                           game_server_address, game_server_port, attempt);
+                chunguslog::info(
+                    "event=verification_codes_delivered game_server_host={} game_server_port={} attempt={}",
+                    game_server_address, game_server_port, attempt);
             }
             enet_host_flush(host);
             enet_peer_disconnect(peer, 0);
@@ -50,10 +54,12 @@ void send_verifications_to_game_server(
             enet_peer_reset(peer);
         }
         enet_host_destroy(host);
-        fmt::print("Game server {}:{} not ready (attempt {}/{}), retrying...\n",
-                   game_server_address, game_server_port, attempt, CONNECT_ATTEMPTS);
+        chunguslog::debug(
+            "event=game_server_not_ready game_server_host={} game_server_port={} attempt={} max_attempts={}",
+            game_server_address, game_server_port, attempt, CONNECT_ATTEMPTS);
     }
 
-    fmt::print("Giving up on sending verification codes to {}:{} after {} attempts\n",
-               game_server_address, game_server_port, CONNECT_ATTEMPTS);
+    chunguslog::error(
+        "event=verification_code_delivery_failed reason=retry_exhausted game_server_host={} game_server_port={} attempts={}",
+        game_server_address, game_server_port, CONNECT_ATTEMPTS);
 }

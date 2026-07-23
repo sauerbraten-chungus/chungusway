@@ -1,7 +1,7 @@
 #include "chungus_service.h"
 #include "enet_client.h"
+#include "logging.h"
 #include <chrono>
-#include <fmt/base.h>
 #include <thread>
 #include <atomic>
 
@@ -31,9 +31,11 @@ grpc::Status ChungusService::StreamEvents(
                               chungustrator_enet::ChungustratorMessage>* stream
 ) {
     std::atomic<bool> stream_active{true};
+    const std::string peer = context->peer();
+    chunguslog::info("event=stream_connected peer={}", peer);
 
     // Writer thread: reads from queue and sends to client
-    std::thread writer([stream, &stream_active]() {
+    std::thread writer([stream, &stream_active, peer]() {
         while (stream_active.load()) {
             chungustrator_enet::ChunguswayMessage msg;
 
@@ -52,6 +54,7 @@ grpc::Status ChungusService::StreamEvents(
             // Write to client (outside the lock)
             if (!stream->Write(msg)) {
                 // Write failed, stream probably closed
+                chunguslog::warn("event=stream_write_failed peer={}", peer);
                 break;
             }
         }
@@ -76,13 +79,17 @@ grpc::Status ChungusService::StreamEvents(
 
             auto* response = outgoing.mutable_verification_code_res();
             if (port == 0) {
-                fmt::println("Verification code request without game_server_port; dropping");
+                chunguslog::warn(
+                    "event=verification_codes_dropped reason=missing_game_server_port players={}",
+                    codes.size());
                 response->set_msg("Missing game_server_port");
             } else {
                 std::thread([buffer, host, port]{
                     send_verifications_to_game_server(host.c_str(), port, buffer);
                 }).detach();
-                fmt::println("Received verification codes for game server {}:{}", host, port);
+                chunguslog::info(
+                    "event=verification_codes_received game_server_host={} game_server_port={} players={}",
+                    host, port, codes.size());
                 response->set_msg("Received verification codes");
             }
             stream->Write(outgoing);
@@ -98,6 +105,8 @@ grpc::Status ChungusService::StreamEvents(
     stream_active.store(false);
     queue_cv.notify_one();  // Wake up writer if it's waiting
     writer.join();
+
+    chunguslog::info("event=stream_disconnected peer={}", peer);
 
     return grpc::Status::OK;
 }
